@@ -27,9 +27,12 @@ namespace Coverlet.Core.Helpers
     private static readonly RegexOptions s_regexOptions =
       RegexOptions.Multiline | RegexOptions.Compiled;
 
-    public InstrumentationHelper(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceRootTranslator)
+    public InstrumentationHelper(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceRootTranslator, InstrumentationOptions options)
     {
-      processExitHandler.Add((s, e) => RestoreOriginalModules());
+      if (options.RestoreModules)
+      {
+        processExitHandler.Add((s, e) => RestoreOriginalModules());
+      }
       _retryHelper = retryHelper;
       _fileSystem = fileSystem;
       _logger = logger;
@@ -415,7 +418,7 @@ namespace Coverlet.Core.Helpers
     }
 
     private static string CreateRegexExcludePattern(IEnumerable<string> filters, char escapeSymbol)
-      //only look for module filters here, types will be filtered out when instrumenting 
+      //only look for module filters here, types will be filtered out when instrumenting
       => CreateRegexPattern(filters, escapeSymbol, filter => filter.Substring(filter.IndexOf(']') + 1) == "*");
 
     private static string CreateRegexIncludePattern(IEnumerable<string> filters, char escapeSymbol) =>

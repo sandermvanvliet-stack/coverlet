@@ -49,6 +49,8 @@ namespace Coverlet.Console
       var doesNotReturnAttributes = new Option<string[]>("--does-not-return-attribute", "Attributes that mark methods that do not return") { Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
       var excludeAssembliesWithoutSources = new Option<string>("--exclude-assemblies-without-sources", "Specifies behavior of heuristic to ignore assemblies with missing source documents.") { Arity = ArgumentArity.ZeroOrOne };
       var sourceMappingFile = new Option<string>("--source-mapping-file", "Specifies the path to a SourceRootsMappings file.") { Arity = ArgumentArity.ZeroOrOne };
+      var instrumentOnly = new Option<bool>("--instrument-only", "Only instrument assemblies, don't run any tests") { Arity = ArgumentArity.ZeroOrOne };
+      var skipRestoreModules = new Option<bool>("--skip-restore-modules", "Do not restore instrumented modules after running tests") { Arity = ArgumentArity.ZeroOrOne };
 
       RootCommand rootCommand = new()
       {
@@ -73,7 +75,9 @@ namespace Coverlet.Console
         useSourceLink,
         doesNotReturnAttributes,
         excludeAssembliesWithoutSources,
-        sourceMappingFile
+        sourceMappingFile,
+        instrumentOnly,
+        skipRestoreModules
       };
 
       rootCommand.Description = "Cross platform .NET Core code coverage tool";
@@ -102,6 +106,8 @@ namespace Coverlet.Console
         string[] doesNotReturnAttributesValue = context.ParseResult.GetValueForOption(doesNotReturnAttributes);
         string excludeAssembliesWithoutSourcesValue = context.ParseResult.GetValueForOption(excludeAssembliesWithoutSources);
         string sourceMappingFileValue = context.ParseResult.GetValueForOption(sourceMappingFile);
+        bool instrumentOnlyValue = context.ParseResult.GetValueForOption(instrumentOnly);
+        bool skipRestoreModulesValue = context.ParseResult.GetValueForOption(skipRestoreModules);
 
         if (string.IsNullOrEmpty(moduleOrAppDirectoryValue) || string.IsNullOrWhiteSpace(moduleOrAppDirectoryValue))
           throw new ArgumentException("No test assembly or application directory specified.");
@@ -127,7 +133,9 @@ namespace Coverlet.Console
                       useSourceLinkValue,
                       doesNotReturnAttributesValue,
                       excludeAssembliesWithoutSourcesValue,
-                      sourceMappingFileValue);
+                      sourceMappingFileValue,
+                      instrumentOnlyValue,
+                      skipRestoreModulesValue);
         context.ExitCode = taskStatus;
 
       });
@@ -154,7 +162,9 @@ namespace Coverlet.Console
                                                            bool useSourceLink,
                                                            string[] doesNotReturnAttributes,
                                                            string excludeAssembliesWithoutSources,
-                                                           string sourceMappingFile
+                                                           string sourceMappingFile,
+                                                           bool instrumentOnly,
+                                                           bool skipRestoreModules
              )
     {
 
@@ -164,7 +174,9 @@ namespace Coverlet.Console
       serviceCollection.AddTransient<IFileSystem, FileSystem>();
       serviceCollection.AddTransient<ILogger, ConsoleLogger>();
       // We need to keep singleton/static semantics
+      serviceCollection.AddSingleton(new InstrumentationOptions { RestoreModules = !skipRestoreModules });
       serviceCollection.AddSingleton<IInstrumentationHelper, InstrumentationHelper>();
+
       serviceCollection.AddSingleton<ISourceRootTranslator, SourceRootTranslator>(provider => new SourceRootTranslator(sourceMappingFile, provider.GetRequiredService<ILogger>(), provider.GetRequiredService<IFileSystem>()));
       serviceCollection.AddSingleton<ICecilSymbolHelper, CecilSymbolHelper>();
 
@@ -204,6 +216,13 @@ namespace Coverlet.Console
                                          sourceRootTranslator,
                                          serviceProvider.GetRequiredService<ICecilSymbolHelper>());
         coverage.PrepareModules();
+
+        if (instrumentOnly)
+        {
+          logger.LogInformation("Instrumentation complete");
+          logger.LogWarning("Only instrumenting modules, exiting...");
+          return Task.FromResult(0);
+        }
 
         Process process = new();
         process.StartInfo.FileName = target;
