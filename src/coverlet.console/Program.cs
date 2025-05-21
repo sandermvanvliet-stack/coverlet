@@ -50,6 +50,7 @@ namespace Coverlet.Console
       var excludeAssembliesWithoutSources = new Option<string>("--exclude-assemblies-without-sources", "Specifies behavior of heuristic to ignore assemblies with missing source documents.") { Arity = ArgumentArity.ZeroOrOne };
       var sourceMappingFile = new Option<string>("--source-mapping-file", "Specifies the path to a SourceRootsMappings file.") { Arity = ArgumentArity.ZeroOrOne };
       var instrumentOnly = new Option<bool>("--instrument-only", "Only instrument assemblies, don't run any tests") { Arity = ArgumentArity.ZeroOrOne };
+      var skipInstrumentModules = new Option<bool>("--skip-instrument-modules", "Do not instrument modules and assume they are already instrumented") { Arity = ArgumentArity.ZeroOrOne };
       var skipRestoreModules = new Option<bool>("--skip-restore-modules", "Do not restore instrumented modules after running tests") { Arity = ArgumentArity.ZeroOrOne };
 
       RootCommand rootCommand = new()
@@ -77,6 +78,7 @@ namespace Coverlet.Console
         excludeAssembliesWithoutSources,
         sourceMappingFile,
         instrumentOnly,
+        skipInstrumentModules,
         skipRestoreModules
       };
 
@@ -107,6 +109,7 @@ namespace Coverlet.Console
         string excludeAssembliesWithoutSourcesValue = context.ParseResult.GetValueForOption(excludeAssembliesWithoutSources);
         string sourceMappingFileValue = context.ParseResult.GetValueForOption(sourceMappingFile);
         bool instrumentOnlyValue = context.ParseResult.GetValueForOption(instrumentOnly);
+        bool skipInstrumentModulesValue = context.ParseResult.GetValueForOption(skipInstrumentModules);
         bool skipRestoreModulesValue = context.ParseResult.GetValueForOption(skipRestoreModules);
 
         if (string.IsNullOrEmpty(moduleOrAppDirectoryValue) || string.IsNullOrWhiteSpace(moduleOrAppDirectoryValue))
@@ -135,6 +138,7 @@ namespace Coverlet.Console
                       excludeAssembliesWithoutSourcesValue,
                       sourceMappingFileValue,
                       instrumentOnlyValue,
+                      skipInstrumentModulesValue,
                       skipRestoreModulesValue);
         context.ExitCode = taskStatus;
 
@@ -164,6 +168,7 @@ namespace Coverlet.Console
                                                            string excludeAssembliesWithoutSources,
                                                            string sourceMappingFile,
                                                            bool instrumentOnly,
+                                                           bool skipInstrumentModules,
                                                            bool skipRestoreModules
              )
     {
@@ -174,7 +179,13 @@ namespace Coverlet.Console
       serviceCollection.AddTransient<IFileSystem, FileSystem>();
       serviceCollection.AddTransient<ILogger, ConsoleLogger>();
       // We need to keep singleton/static semantics
-      serviceCollection.AddSingleton(new InstrumentationOptions { RestoreModules = !skipRestoreModules });
+      var instrumentationOptions = new InstrumentationOptions
+      {
+        RestoreModules = !skipRestoreModules,
+        SkipInstrumentModules = skipInstrumentModules,
+        InstrumentOnly = instrumentOnly
+      };
+      serviceCollection.AddSingleton(instrumentationOptions);
       serviceCollection.AddSingleton<IInstrumentationHelper, InstrumentationHelper>();
 
       serviceCollection.AddSingleton<ISourceRootTranslator, SourceRootTranslator>(provider => new SourceRootTranslator(sourceMappingFile, provider.GetRequiredService<ILogger>(), provider.GetRequiredService<IFileSystem>()));
@@ -214,7 +225,8 @@ namespace Coverlet.Console
                                          serviceProvider.GetRequiredService<IInstrumentationHelper>(),
                                          fileSystem,
                                          sourceRootTranslator,
-                                         serviceProvider.GetRequiredService<ICecilSymbolHelper>());
+                                         serviceProvider.GetRequiredService<ICecilSymbolHelper>(),
+                                         instrumentationOptions);
         coverage.PrepareModules();
 
         if (instrumentOnly)

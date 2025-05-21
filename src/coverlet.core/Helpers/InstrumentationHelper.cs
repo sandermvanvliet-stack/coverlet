@@ -27,6 +27,12 @@ namespace Coverlet.Core.Helpers
     private static readonly RegexOptions s_regexOptions =
       RegexOptions.Multiline | RegexOptions.Compiled;
 
+    public InstrumentationHelper(IProcessExitHandler processExitHandler, IRetryHelper retryHelper,
+      IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceRootTranslator)
+    : this(processExitHandler, retryHelper, fileSystem, logger, sourceRootTranslator, InstrumentationOptions.Default)
+    {
+    }
+
     public InstrumentationHelper(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceRootTranslator, InstrumentationOptions options)
     {
       if (options.RestoreModules)

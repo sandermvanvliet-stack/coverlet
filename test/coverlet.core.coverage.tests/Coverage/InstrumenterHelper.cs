@@ -123,7 +123,7 @@ namespace Coverlet.Core.Tests
 
       // Instrument module
       var coverage = new Coverage(newPath, parameters, new Logger(logFile),
-      s_processWideContainer.GetService<IInstrumentationHelper>(), s_processWideContainer.GetService<IFileSystem>(), s_processWideContainer.GetService<ISourceRootTranslator>(), s_processWideContainer.GetService<ICecilSymbolHelper>());
+      s_processWideContainer.GetService<IInstrumentationHelper>(), s_processWideContainer.GetService<IFileSystem>(), s_processWideContainer.GetService<ISourceRootTranslator>(), s_processWideContainer.GetService<ICecilSymbolHelper>(), InstrumentationOptions.Default);
       CoveragePrepareResult prepareResult = coverage.PrepareModules();
 
       Assert.Single(prepareResult.Results);
@@ -203,7 +203,7 @@ namespace Coverlet.Core.Tests
     public void Add(EventHandler handler)
     {
       // We don't subscribe to process exit, we let parent restore module.
-      // On msbuild/console/collector code run inside same app domain so statics list of 
+      // On msbuild/console/collector code run inside same app domain so statics list of
       // files to restore are shared, but on test we run instrumentation on child process
       // so there is a race between parent/child on files restore.
       // In normal condition Process.Exit try to restore files only in case of
@@ -301,7 +301,7 @@ namespace Coverlet.Core.Tests
   class InstrumentationHelperForDebugging : InstrumentationHelper
   {
     public InstrumentationHelperForDebugging(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceTranslator)
-        : base(processExitHandler, retryHelper, fileSystem, logger, sourceTranslator)
+        : base(processExitHandler, retryHelper, fileSystem, logger, sourceTranslator, InstrumentationOptions.Default)
     {
 
     }

@@ -54,6 +54,7 @@ namespace Coverlet.Core
     private readonly IInstrumentationHelper _instrumentationHelper;
     private readonly IFileSystem _fileSystem;
     private readonly ISourceRootTranslator _sourceRootTranslator;
+    private readonly InstrumentationOptions _instrumentationOptions;
     private readonly ICecilSymbolHelper _cecilSymbolHelper;
     private readonly List<InstrumenterResult> _results;
     private readonly CoverageParameters _parameters;
@@ -61,12 +62,25 @@ namespace Coverlet.Core
     public string Identifier { get; }
 
     public Coverage(string moduleOrDirectory,
+      CoverageParameters parameters,
+      ILogger logger,
+      IInstrumentationHelper instrumentationHelper,
+      IFileSystem fileSystem,
+      ISourceRootTranslator sourceRootTranslator,
+      ICecilSymbolHelper cecilSymbolHelper)
+      : this(moduleOrDirectory, parameters, logger, instrumentationHelper, fileSystem, sourceRootTranslator,
+        cecilSymbolHelper, InstrumentationOptions.Default)
+    {
+    }
+
+    public Coverage(string moduleOrDirectory,
         CoverageParameters parameters,
         ILogger logger,
         IInstrumentationHelper instrumentationHelper,
         IFileSystem fileSystem,
         ISourceRootTranslator sourceRootTranslator,
-        ICecilSymbolHelper cecilSymbolHelper)
+        ICecilSymbolHelper cecilSymbolHelper,
+        InstrumentationOptions instrumentationOptions)
     {
       _moduleOrAppDirectory = moduleOrDirectory;
       parameters.IncludeDirectories ??= [];
@@ -78,6 +92,7 @@ namespace Coverlet.Core
       _cecilSymbolHelper = cecilSymbolHelper;
       Identifier = Guid.NewGuid().ToString();
       _results = [];
+      _instrumentationOptions = instrumentationOptions;
     }
 
     public Coverage(CoveragePrepareResult prepareResult,
@@ -113,35 +128,42 @@ namespace Coverlet.Core
         _logger.LogVerbose($"Excluded module: '{excludedModule}'");
       }
 
-      foreach (string module in validModules)
+      if (_instrumentationOptions.SkipInstrumentModules)
       {
-        var instrumenter = new Instrumenter(module,
-                                            Identifier,
-                                            _parameters,
-                                            _logger,
-                                            _instrumentationHelper,
-                                            _fileSystem,
-                                            _sourceRootTranslator,
-                                            _cecilSymbolHelper);
-
-        if (instrumenter.CanInstrument())
+        _logger.LogWarning("SKipping instrumentation of modules, assuming they are already instrumented.");
+      }
+      else
+      {
+        foreach (string module in validModules)
         {
-          _instrumentationHelper.BackupOriginalModule(module, Identifier);
+          var instrumenter = new Instrumenter(module,
+            Identifier,
+            _parameters,
+            _logger,
+            _instrumentationHelper,
+            _fileSystem,
+            _sourceRootTranslator,
+            _cecilSymbolHelper);
 
-          // Guard code path and restore if instrumentation fails.
-          try
+          if (instrumenter.CanInstrument())
           {
-            InstrumenterResult result = instrumenter.Instrument();
-            if (!instrumenter.SkipModule)
+            _instrumentationHelper.BackupOriginalModule(module, Identifier);
+
+            // Guard code path and restore if instrumentation fails.
+            try
             {
-              _results.Add(result);
-              _logger.LogVerbose($"Instrumented module: '{module}'");
+              InstrumenterResult result = instrumenter.Instrument();
+              if (!instrumenter.SkipModule)
+              {
+                _results.Add(result);
+                _logger.LogVerbose($"Instrumented module: '{module}'");
+              }
             }
-          }
-          catch (Exception ex)
-          {
-            _logger.LogWarning($"Unable to instrument module: {module}\n{ex}");
-            _instrumentationHelper.RestoreOriginalModule(module, Identifier);
+            catch (Exception ex)
+            {
+              _logger.LogWarning($"Unable to instrument module: {module}\n{ex}");
+              _instrumentationHelper.RestoreOriginalModule(module, Identifier);
+            }
           }
         }
       }

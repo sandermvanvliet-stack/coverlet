@@ -129,7 +129,7 @@ namespace coverlet.msbuild.tasks.tests
   class InstrumentationHelperForDebugging : InstrumentationHelper
   {
     public InstrumentationHelperForDebugging(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, Coverlet.Core.Abstractions.ILogger logger, ISourceRootTranslator sourceTranslator)
-        : base(processExitHandler, retryHelper, fileSystem, logger, sourceTranslator)
+        : base(processExitHandler, retryHelper, fileSystem, logger, sourceTranslator, InstrumentationOptions.Default)
     {
 
     }
