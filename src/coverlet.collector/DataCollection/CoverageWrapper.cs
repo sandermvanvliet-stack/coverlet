@@ -1,6 +1,9 @@
 ﻿// Copyright (c) Toni Solarin-Sodara
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.IO;
+using System.Runtime.Serialization;
+using System.Xml;
 using Coverlet.Collector.Utilities.Interfaces;
 using Coverlet.Core;
 using Coverlet.Core.Abstractions;
@@ -40,6 +43,25 @@ namespace Coverlet.Collector.DataCollection
         DeterministicReport = settings.DeterministicReport,
         ExcludeAssembliesWithoutSources = settings.ExcludeAssembliesWithoutSources
       };
+
+      if (settings.SkipInstrumentModules)
+      {
+        CoveragePrepareResult coverageResult;
+
+        string coverageResultsFile = "coverage-result.xml";
+        using (FileStream inputStream = File.OpenRead(coverageResultsFile))
+        using (var xmlWriter = XmlReader.Create(inputStream))
+        {
+          var serializer = new DataContractSerializer(typeof(CoveragePrepareResult));
+          coverageResult = (CoveragePrepareResult)serializer.ReadObject(xmlWriter);
+        }
+
+        return new(coverageResult,
+          coverletLogger,
+          instrumentationHelper,
+          fileSystem,
+          sourceRootTranslator);
+      }
 
       return new Coverage(
           settings.TestModule,

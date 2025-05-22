@@ -32,7 +32,8 @@ namespace Coverlet.Core.Tests
 
       var instrumentationHelper =
           new InstrumentationHelper(new ProcessExitHandler(), new RetryHelper(), new FileSystem(), new Mock<ILogger>().Object,
-                                    new SourceRootTranslator(excludedbyattributeDll, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()));
+                                    new SourceRootTranslator(excludedbyattributeDll, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()),
+                                    InstrumentationOptions.Default);
 
       var parameters = new CoverageParameters
       {

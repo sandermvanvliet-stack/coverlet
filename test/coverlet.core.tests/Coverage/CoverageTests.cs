@@ -33,7 +33,8 @@ namespace Coverlet.Core.Tests
       // TODO: Find a way to mimic hits
       var instrumentationHelper =
           new InstrumentationHelper(new ProcessExitHandler(), new RetryHelper(), new FileSystem(), new Mock<ILogger>().Object,
-                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()));
+                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()),
+                                    InstrumentationOptions.Default);
 
       var parameters = new CoverageParameters
       {
@@ -71,7 +72,8 @@ namespace Coverlet.Core.Tests
 
       var instrumentationHelper =
           new InstrumentationHelper(new ProcessExitHandler(), new RetryHelper(), new FileSystem(), new Mock<ILogger>().Object,
-                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()));
+                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()),
+                                    InstrumentationOptions.Default);
 
       var parameters = new CoverageParameters
       {
@@ -111,7 +113,8 @@ namespace Coverlet.Core.Tests
       // TODO: Find a way to mimic hits
       var instrumentationHelper =
           new InstrumentationHelper(new ProcessExitHandler(), new RetryHelper(), new FileSystem(), new Mock<ILogger>().Object,
-                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()));
+                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()),
+                                    InstrumentationOptions.Default);
 
       var parameters = new CoverageParameters
       {
@@ -152,7 +155,8 @@ namespace Coverlet.Core.Tests
       // TODO: Find a way to mimic hits
       var instrumentationHelper =
           new InstrumentationHelper(new ProcessExitHandler(), new RetryHelper(), new FileSystem(), new Mock<ILogger>().Object,
-                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()));
+                                    new SourceRootTranslator(module, new Mock<ILogger>().Object, new FileSystem(), new AssemblyAdapter()),
+                                    InstrumentationOptions.Default);
 
       var parameters = new CoverageParameters
       {

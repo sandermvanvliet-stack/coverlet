@@ -117,7 +117,8 @@ namespace Coverlet.Collector.Tests
                                     new Mock<IRetryHelper>().Object,
                                     new Mock<IFileSystem>().Object,
                                     new Mock<ILogger>().Object,
-                                    new Mock<ISourceRootTranslator>().Object);
+                                    new Mock<ISourceRootTranslator>().Object,
+                                    InstrumentationOptions.Default);
 
       var parameters = new CoverageParameters
       {

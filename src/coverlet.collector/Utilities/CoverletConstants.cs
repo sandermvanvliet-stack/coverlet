@@ -27,5 +27,7 @@ namespace Coverlet.Collector.Utilities
     public const string DoesNotReturnAttributesElementName = "DoesNotReturnAttribute";
     public const string DeterministicReport = "DeterministicReport";
     public const string ExcludeAssembliesWithoutSources = "ExcludeAssembliesWithoutSources";
+    public const string SkipInstrumentModulesElementName = "SkipInstrumentModules";
+    public const string OutputPathElementName = "OutputPath";
   }
 }

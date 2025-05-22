@@ -48,6 +48,8 @@ namespace Coverlet.Collector.DataCollection
         coverletSettings.DoesNotReturnAttributes = ParseDoesNotReturnAttributes(configurationElement);
         coverletSettings.DeterministicReport = ParseDeterministicReport(configurationElement);
         coverletSettings.ExcludeAssembliesWithoutSources = ParseExcludeAssembliesWithoutSources(configurationElement);
+        coverletSettings.SkipInstrumentModules = ParseSkipInstrumentModules(configurationElement);
+        coverletSettings.OutputPath = ParseOutputPath(configurationElement);
       }
 
       coverletSettings.ReportFormats = ParseReportFormats(configurationElement);
@@ -59,6 +61,19 @@ namespace Coverlet.Collector.DataCollection
       }
 
       return coverletSettings;
+    }
+
+    private string ParseOutputPath(XmlElement configurationElement)
+    {
+      XmlElement outputPathElement = configurationElement[CoverletConstants.OutputPathElementName];
+      return outputPathElement?.InnerText;
+    }
+
+    private bool ParseSkipInstrumentModules(XmlElement configurationElement)
+    {
+      XmlElement skipInstrumentModulesElement = configurationElement[CoverletConstants.SkipInstrumentModulesElementName];
+      bool.TryParse(skipInstrumentModulesElement?.InnerText, out bool skipInstrumentModules);
+      return skipInstrumentModules;
     }
 
     /// <summary>

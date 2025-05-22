@@ -86,6 +86,16 @@ namespace Coverlet.Collector.DataCollection
     /// </summary>
     public string ExcludeAssembliesWithoutSources { get; set; }
 
+    /// <summary>
+    /// Skip the instrumentation step
+    /// </summary>
+    public bool SkipInstrumentModules { get; set; }
+
+    /// <summary>
+    /// A fixed output path without VSTest randomized path
+    /// </summary>
+    public string OutputPath { get; set; }
+
     public override string ToString()
     {
       var builder = new StringBuilder();
@@ -104,6 +114,8 @@ namespace Coverlet.Collector.DataCollection
       builder.AppendFormat("DoesNotReturnAttributes: '{0}'", string.Join(",", DoesNotReturnAttributes ?? Enumerable.Empty<string>()));
       builder.AppendFormat("DeterministicReport: '{0}'", DeterministicReport);
       builder.AppendFormat("ExcludeAssembliesWithoutSources: '{0}'", ExcludeAssembliesWithoutSources);
+      builder.AppendFormat("SkipInstrumentation: '{0}'", SkipInstrumentModules);
+      builder.AppendFormat("OutputPath: '{0}'", OutputPath);
 
       return builder.ToString();
     }

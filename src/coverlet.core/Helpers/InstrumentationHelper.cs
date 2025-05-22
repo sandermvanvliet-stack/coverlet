@@ -24,21 +24,15 @@ namespace Coverlet.Core.Helpers
     private readonly IFileSystem _fileSystem;
     private readonly ISourceRootTranslator _sourceRootTranslator;
     private ILogger _logger;
+    private readonly InstrumentationOptions _instrumentationOptions;
+
     private static readonly RegexOptions s_regexOptions =
       RegexOptions.Multiline | RegexOptions.Compiled;
 
-    public InstrumentationHelper(IProcessExitHandler processExitHandler, IRetryHelper retryHelper,
-      IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceRootTranslator)
-    : this(processExitHandler, retryHelper, fileSystem, logger, sourceRootTranslator, InstrumentationOptions.Default)
+    public InstrumentationHelper(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceRootTranslator, InstrumentationOptions instrumentationOptions)
     {
-    }
-
-    public InstrumentationHelper(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceRootTranslator, InstrumentationOptions options)
-    {
-      if (options.RestoreModules)
-      {
-        processExitHandler.Add((s, e) => RestoreOriginalModules());
-      }
+      processExitHandler.Add((s, e) => RestoreOriginalModules());
+      _instrumentationOptions = instrumentationOptions;
       _retryHelper = retryHelper;
       _fileSystem = fileSystem;
       _logger = logger;
@@ -285,6 +279,11 @@ namespace Coverlet.Core.Helpers
     /// <param name="identifier">A unique identifier to distinguish the backup file.</param>
     public virtual void RestoreOriginalModule(string module, string identifier)
     {
+      if (_instrumentationOptions.SkipRestoreModules)
+      {
+        return;
+      }
+
       string backupPath = GetBackupPath(module, identifier);
       string backupSymbolPath = Path.ChangeExtension(backupPath, ".pdb");
 
@@ -313,6 +312,11 @@ namespace Coverlet.Core.Helpers
 
     public virtual void RestoreOriginalModules()
     {
+      if (_instrumentationOptions.SkipRestoreModules)
+      {
+        return;
+      }
+
       // Restore the original module - retry up to 10 times, since the destination file could be locked
       // See: https://github.com/tonerdo/coverlet/issues/25
       Func<TimeSpan> retryStrategy = CreateRetryStrategy();

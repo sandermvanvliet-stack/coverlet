@@ -192,7 +192,7 @@ namespace Coverlet.Core.Tests
     public void Add(EventHandler handler)
     {
       // We don't subscribe to process exit, we let parent restore module.
-      // On msbuild/console/collector code run inside same app domain so statics list of 
+      // On msbuild/console/collector code run inside same app domain so statics list of
       // files to restore are shared, but on test we run instrumentation on child process
       // so there is a race between parent/child on files restore.
       // In normal condition Process.Exit try to restore files only in case of
@@ -289,8 +289,8 @@ namespace Coverlet.Core.Tests
 
   class InstrumentationHelperForDebugging : InstrumentationHelper
   {
-    public InstrumentationHelperForDebugging(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceTranslator)
-        : base(processExitHandler, retryHelper, fileSystem, logger, sourceTranslator)
+    public InstrumentationHelperForDebugging(IProcessExitHandler processExitHandler, IRetryHelper retryHelper, IFileSystem fileSystem, ILogger logger, ISourceRootTranslator sourceTranslator, InstrumentationOptions instrumentationOptions)
+        : base(processExitHandler, retryHelper, fileSystem, logger, sourceTranslator, instrumentationOptions)
     {
 
     }

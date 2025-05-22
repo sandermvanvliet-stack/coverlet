@@ -21,6 +21,7 @@ namespace Coverlet.Collector.DataCollection
     private readonly Coverage _coverage;
     private readonly ICoverageWrapper _coverageWrapper;
     private readonly ISourceRootTranslator _sourceRootTranslator;
+    public CoverletSettings Settings { get; }
     public IReporter[] Reporters { get; }
 
     public CoverageManager(CoverletSettings settings, TestPlatformEqtTrace eqtTrace, TestPlatformLogger logger, ICoverageWrapper coverageWrapper,
@@ -52,7 +53,8 @@ namespace Coverlet.Collector.DataCollection
       _coverageWrapper = coverageWrapper;
       _sourceRootTranslator = sourceRootTranslator;
       // Coverage object
-      _coverage = _coverageWrapper.CreateCoverage(settings, logger, instrumentationHelper, fileSystem, sourceRootTranslator, cecilSymbolHelper);
+      Settings = settings;
+      _coverage = _coverageWrapper.CreateCoverage(Settings, logger, instrumentationHelper, fileSystem, sourceRootTranslator, cecilSymbolHelper);
     }
 
     /// <summary>

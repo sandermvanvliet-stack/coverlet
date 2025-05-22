@@ -9,8 +9,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using ConsoleTables;
 using Coverlet.Console.Logging;
 using Coverlet.Core;
@@ -51,7 +53,6 @@ namespace Coverlet.Console
       var sourceMappingFile = new Option<string>("--source-mapping-file", "Specifies the path to a SourceRootsMappings file.") { Arity = ArgumentArity.ZeroOrOne };
       var instrumentOnly = new Option<bool>("--instrument-only", "Only instrument assemblies, don't run any tests") { Arity = ArgumentArity.ZeroOrOne };
       var skipInstrumentModules = new Option<bool>("--skip-instrument-modules", "Do not instrument modules and assume they are already instrumented") { Arity = ArgumentArity.ZeroOrOne };
-      var skipRestoreModules = new Option<bool>("--skip-restore-modules", "Do not restore instrumented modules after running tests") { Arity = ArgumentArity.ZeroOrOne };
 
       RootCommand rootCommand = new()
       {
@@ -78,8 +79,7 @@ namespace Coverlet.Console
         excludeAssembliesWithoutSources,
         sourceMappingFile,
         instrumentOnly,
-        skipInstrumentModules,
-        skipRestoreModules
+        skipInstrumentModules
       };
 
       rootCommand.Description = "Cross platform .NET Core code coverage tool";
@@ -110,7 +110,6 @@ namespace Coverlet.Console
         string sourceMappingFileValue = context.ParseResult.GetValueForOption(sourceMappingFile);
         bool instrumentOnlyValue = context.ParseResult.GetValueForOption(instrumentOnly);
         bool skipInstrumentModulesValue = context.ParseResult.GetValueForOption(skipInstrumentModules);
-        bool skipRestoreModulesValue = context.ParseResult.GetValueForOption(skipRestoreModules);
 
         if (string.IsNullOrEmpty(moduleOrAppDirectoryValue) || string.IsNullOrWhiteSpace(moduleOrAppDirectoryValue))
           throw new ArgumentException("No test assembly or application directory specified.");
@@ -138,8 +137,7 @@ namespace Coverlet.Console
                       excludeAssembliesWithoutSourcesValue,
                       sourceMappingFileValue,
                       instrumentOnlyValue,
-                      skipInstrumentModulesValue,
-                      skipRestoreModulesValue);
+                      skipInstrumentModulesValue);
         context.ExitCode = taskStatus;
 
       });
@@ -168,8 +166,7 @@ namespace Coverlet.Console
                                                            string excludeAssembliesWithoutSources,
                                                            string sourceMappingFile,
                                                            bool instrumentOnly,
-                                                           bool skipInstrumentModules,
-                                                           bool skipRestoreModules
+                                                           bool skipInstrumentModules
              )
     {
 
@@ -181,7 +178,6 @@ namespace Coverlet.Console
       // We need to keep singleton/static semantics
       var instrumentationOptions = new InstrumentationOptions
       {
-        RestoreModules = !skipRestoreModules,
         SkipInstrumentModules = skipInstrumentModules,
         InstrumentOnly = instrumentOnly
       };
@@ -219,21 +215,68 @@ namespace Coverlet.Console
         };
         ISourceRootTranslator sourceRootTranslator = serviceProvider.GetRequiredService<ISourceRootTranslator>();
 
-        Coverage coverage = new(moduleOrAppDirectory,
-                                         parameters,
-                                         logger,
-                                         serviceProvider.GetRequiredService<IInstrumentationHelper>(),
-                                         fileSystem,
-                                         sourceRootTranslator,
-                                         serviceProvider.GetRequiredService<ICecilSymbolHelper>(),
-                                         instrumentationOptions);
-        coverage.PrepareModules();
+        Coverage coverage;
 
-        if (instrumentOnly)
+        if (instrumentationOptions.SkipInstrumentModules)
         {
-          logger.LogInformation("Instrumentation complete");
-          logger.LogWarning("Only instrumenting modules, exiting...");
-          return Task.FromResult(0);
+          logger.LogWarning("Using pre-instrumented modules, skipping instrumentation");
+
+          logger.LogVerbose("Loading instrumentation data...");
+
+          CoveragePrepareResult coverageResult;
+
+          string coverageResultsFile = "coverage-result.xml";
+          using (FileStream inputStream = File.OpenRead(coverageResultsFile))
+          using (var xmlWriter = XmlReader.Create(inputStream))
+          {
+            var serializer = new DataContractSerializer(typeof(CoveragePrepareResult));
+            coverageResult =(CoveragePrepareResult)serializer.ReadObject(xmlWriter);
+          }
+
+          logger.LogVerbose("Instrumentation data loaded");
+
+          coverage = new(coverageResult,
+            logger,
+            serviceProvider.GetRequiredService<IInstrumentationHelper>(),
+            fileSystem,
+            sourceRootTranslator);
+        }
+        else
+        {
+          coverage = new(moduleOrAppDirectory,
+            parameters,
+            logger,
+            serviceProvider.GetRequiredService<IInstrumentationHelper>(),
+            fileSystem,
+            sourceRootTranslator,
+            serviceProvider.GetRequiredService<ICecilSymbolHelper>(),
+            instrumentationOptions);
+
+          CoveragePrepareResult coverageResult = coverage.PrepareModules();
+
+          if (instrumentOnly)
+          {
+            logger.LogVerbose("Instrumentation complete");
+
+            logger.LogVerbose("Saving instrumentation data...");
+            string coverageResultsFile = "coverage-result.xml";
+            if (File.Exists(coverageResultsFile))
+            {
+              File.Delete(coverageResultsFile);
+            }
+            var serializer = new DataContractSerializer(typeof(CoveragePrepareResult));
+            using (FileStream outputStream = File.OpenWrite(coverageResultsFile))
+            using (var xmlWriter = XmlWriter.Create(outputStream, new XmlWriterSettings { Indent = true }))
+            {
+              serializer.WriteObject(xmlWriter, coverageResult);
+              xmlWriter.Flush();
+            }
+            logger.LogVerbose($"Instrumentation data saved to {coverageResultsFile}");
+
+            logger.LogVerbose("Only instrumenting modules, exiting...");
+
+            return Task.FromResult(0);
+          }
         }
 
         Process process = new();

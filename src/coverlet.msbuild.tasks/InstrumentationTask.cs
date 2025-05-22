@@ -49,6 +49,8 @@ namespace Coverlet.MSbuild.Tasks
 
     public string ExcludeAssembliesWithoutSources { get; set; }
 
+    public bool SkipInstrumentModules { get; set; }
+
     [Output]
     public ITaskItem InstrumenterState { get; set; }
 
@@ -80,6 +82,7 @@ namespace Coverlet.MSbuild.Tasks
       serviceCollection.AddSingleton<ISourceRootTranslator, SourceRootTranslator>(serviceProvider =>
           new SourceRootTranslator(Path, serviceProvider.GetRequiredService<ILogger>(), serviceProvider.GetRequiredService<IFileSystem>(), serviceProvider.GetRequiredService<IAssemblyAdapter>()));
       // We need to keep singleton/static semantics
+      serviceCollection.AddSingleton(new InstrumentationOptions { SkipInstrumentModules = SkipInstrumentModules });
       serviceCollection.AddSingleton<IInstrumentationHelper, InstrumentationHelper>();
       serviceCollection.AddSingleton<ICecilSymbolHelper, CecilSymbolHelper>();
 

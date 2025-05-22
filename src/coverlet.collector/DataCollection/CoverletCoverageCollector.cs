@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Xml;
 using Coverlet.Collector.Utilities;
@@ -132,15 +133,19 @@ namespace Coverlet.Collector.DataCollection
         CoverletSettings coverletSettings = coverletSettingsParser.Parse(_configurationElement, testModules);
 
         // Build services container
-        _serviceProvider = _serviceCollectionFactory(_eqtTrace, _logger, coverletSettings.TestModule).BuildServiceProvider();
+        var instrumentationOptions = new InstrumentationOptions { SkipInstrumentModules = coverletSettings.SkipInstrumentModules };
+        _serviceProvider = _serviceCollectionFactory(_eqtTrace, _logger, coverletSettings.TestModule).AddSingleton(instrumentationOptions).BuildServiceProvider();
 
         // Get coverage and attachment managers
         _coverageManager = new CoverageManager(coverletSettings, _eqtTrace, _logger, _coverageWrapper,
                                                 _serviceProvider.GetRequiredService<IInstrumentationHelper>(), _serviceProvider.GetRequiredService<IFileSystem>(),
                                                 _serviceProvider.GetRequiredService<ISourceRootTranslator>(), _serviceProvider.GetRequiredService<ICecilSymbolHelper>());
 
-        // Instrument modules
-        _coverageManager.InstrumentModules();
+        if (!coverletSettings.SkipInstrumentModules)
+        {
+          // Instrument modules
+          _coverageManager.InstrumentModules();
+        }
       }
       catch (Exception ex)
       {
@@ -165,10 +170,23 @@ namespace Coverlet.Collector.DataCollection
 
         if (coverageReports != null && coverageReports.Any())
         {
+          if (!string.IsNullOrEmpty(_coverageManager.Settings.OutputPath))
+          {
+            if (!Directory.Exists(_coverageManager.Settings.OutputPath))
+            {
+              Directory.CreateDirectory(_coverageManager.Settings.OutputPath);
+            }
+          }
+
           // Send result attachments to test platform.
           using var attachmentManager = new AttachmentManager(_dataSink, _dataCollectionContext, _logger, _eqtTrace, _countDownEventFactory.Create(coverageReports.Count(), TimeSpan.FromSeconds(30)));
           foreach ((string report, string fileName) in coverageReports)
           {
+            if (!string.IsNullOrEmpty(_coverageManager.Settings.OutputPath))
+            {
+              File.WriteAllText(Path.Combine(_coverageManager.Settings.OutputPath, fileName), report);
+            }
+
             attachmentManager.SendCoverageReport(report, fileName);
           }
         }
