@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
@@ -81,7 +80,9 @@ namespace Coverlet.Core.Helpers
       if (!includeTestAssembly && !isAppDirectory)
         uniqueModules.Add(Path.GetFileName(moduleOrAppDirectory));
 
-      return [.. dirs.SelectMany(d => Directory.EnumerateFiles(d)).Where(m => IsAssembly(m) && uniqueModules.Add(Path.GetFileName(m)))];
+      return [.. dirs
+          .SelectMany(d => Directory.EnumerateFiles(d, "*.dll"))
+          .Where(m => IsAssembly(m) && uniqueModules.Add(Path.GetFileName(m)))];
     }
 
     public bool HasPdb(string module, out bool embedded)
@@ -530,8 +531,10 @@ namespace Coverlet.Core.Helpers
 
       try
       {
-        AssemblyName.GetAssemblyName(filePath);
-        return true;
+        using FileStream stream = File.OpenRead(filePath);
+        using var peReader = new PEReader(stream, PEStreamOptions.Default);
+
+        return peReader.HasMetadata && peReader.PEHeaders.CorHeader != null;
       }
       catch
       {
