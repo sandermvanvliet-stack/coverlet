@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -113,8 +114,12 @@ namespace Coverlet.Core
 
     public CoveragePrepareResult PrepareModules()
     {
+      var stopwatch = Stopwatch.StartNew();
       string[] modules = _instrumentationHelper.GetCoverableModules(_moduleOrAppDirectory, _parameters.IncludeDirectories, _parameters.IncludeTestAssembly);
+      stopwatch.Stop();
+      _logger.LogVerbose($"Found {modules.Length} modules in {_moduleOrAppDirectory} in {stopwatch.ElapsedMilliseconds}ms");
 
+      stopwatch.Restart();
       Array.ForEach(_parameters.ExcludeFilters ?? [], filter => _logger.LogVerbose($"Excluded module filter '{filter}'"));
       Array.ForEach(_parameters.IncludeFilters ?? [], filter => _logger.LogVerbose($"Included module filter '{filter}'"));
       Array.ForEach(_parameters.ExcludedSourceFiles ?? [], filter => _logger.LogVerbose($"Excluded source files filter '{FileSystem.EscapeFileName(filter)}'"));
@@ -127,6 +132,8 @@ namespace Coverlet.Core
       {
         _logger.LogVerbose($"Excluded module: '{excludedModule}'");
       }
+
+      _logger.LogVerbose($"Exclusion logic tool {stopwatch.ElapsedMilliseconds}ms");
 
       if (_instrumentationOptions.SkipInstrumentModules)
       {
@@ -147,22 +154,36 @@ namespace Coverlet.Core
 
           if (instrumenter.CanInstrument())
           {
+            _logger.LogVerbose($"Instrumenting module: '{module}'");
+            stopwatch = Stopwatch.StartNew();
+
+            var backupStopwatch = Stopwatch.StartNew();
             _instrumentationHelper.BackupOriginalModule(module, Identifier);
+            backupStopwatch.Stop();
+            _logger.LogVerbose($"Backup took {backupStopwatch.ElapsedMilliseconds}ms");
 
             // Guard code path and restore if instrumentation fails.
             try
             {
+              var instrumentStopwatch = Stopwatch.StartNew();
               InstrumenterResult result = instrumenter.Instrument();
+              instrumentStopwatch.Stop();
+              _logger.LogVerbose($"Instrument step took {instrumentStopwatch.ElapsedMilliseconds}ms");
+
               if (!instrumenter.SkipModule)
               {
                 _results.Add(result);
-                _logger.LogVerbose($"Instrumented module: '{module}'");
               }
             }
             catch (Exception ex)
             {
               _logger.LogWarning($"Unable to instrument module: {module}\n{ex}");
               _instrumentationHelper.RestoreOriginalModule(module, Identifier);
+            }
+            finally
+            {
+              stopwatch.Stop();
+              _logger.LogVerbose($"Overall took {stopwatch.ElapsedMilliseconds}ms");
             }
           }
         }

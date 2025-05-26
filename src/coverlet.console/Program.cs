@@ -252,7 +252,10 @@ namespace Coverlet.Console
             serviceProvider.GetRequiredService<ICecilSymbolHelper>(),
             instrumentationOptions);
 
+          var stopwatch = Stopwatch.StartNew();
           CoveragePrepareResult coverageResult = coverage.PrepareModules();
+          stopwatch.Stop();
+          logger.LogVerbose($"Total instrumentation took {stopwatch.ElapsedMilliseconds}ms");
 
           if (instrumentOnly)
           {
