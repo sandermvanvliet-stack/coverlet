@@ -46,10 +46,15 @@ namespace Coverlet.Collector.DataCollection
 
       if (settings.SkipInstrumentModules)
       {
+
         CoveragePrepareResult coverageResult;
 
         string coverageResultsFile = "coverage-result.xml";
-        using (FileStream inputStream = File.OpenRead(coverageResultsFile))
+
+        // Expect the coverage results file to be adjecent to the test module
+        string coverageResultsFilePath = Path.Combine(Path.GetDirectoryName(settings.TestModule), coverageResultsFile);
+
+        using (FileStream inputStream = File.OpenRead(coverageResultsFilePath))
         using (var xmlWriter = XmlReader.Create(inputStream))
         {
           var serializer = new DataContractSerializer(typeof(CoveragePrepareResult));
